@@ -118,8 +118,8 @@ Choose your mode of transport from the dropdown menu.
 **Do take note that the application will take a few seconds to load the route.**
 
 ## Contributors
-
-## CEO: [Munir](https://open.spotify.com/track/37xuoeOvBLK6zV9wkgRttR?si=58e287e51473457a)
-### CTO: JJ  
-#### Head Software Engineers: Travis & Shaoyu  
-##### Janitor: Alan  
+- Munir
+- JJ
+- Travis
+- Alan
+- Shaoyu
