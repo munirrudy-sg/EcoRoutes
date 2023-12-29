@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html data-bs-theme="light" lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, shrink-to-fit=no">
+    <title>EcoRoutes</title>
+    <link rel="stylesheet" href="/static/assets/bootstrap/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/assets/css/Footer-Clean-icons.css">
+    <link rel="stylesheet" href="/static/assets/css/Base.css">
+    <style>
+        /* Added CSS styles for the map-container and its parent div */
+        #map-container {
+            width: 90%;
+            height: 60%; /* Set the height to fill its parent's height */
+        }
+
+        .map-parent {
+            height: 100vh; /* Set the height of the parent div to the viewport height */
+            display: flex; /* Use flexbox to distribute the available vertical space */
+        }
+
+        .col-md-9 {
+            flex: 1; /* Make the map column expand to fill the available space */
+            width: 90%;
+            height: 60%; /* Set the height to fill its parent's height */
+        }
+        /* New CSS styles for autocomplete */
+        .autocomplete-items {
+            position: absolute;
+            background-color: white;
+            border: 1px solid #ccc;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .autocomplete-items div {
+            padding: 5px;
+            cursor: pointer;
+        }
+
+        .autocomplete-items div:hover {
+            background-color: #e9e9e9;
+        }
+        .autocomplete-active {
+        /*when navigating through the items using the arrow keys:*/
+        background-color: DodgerBlue !important;
+        color: #ffffff;
+        }
+        .scrollable-div {
+            height: 350px; /* Set the desired height for the div */
+            overflow: auto; /* Use 'auto' for scrollbars to appear only when necessary, 'scroll' for always visible scrollbars */
+            border: 1px solid #ccc; /* Optional: Add a border to the div for visual clarity */
+            padding: 10px; /* Optional: Add padding to create some spacing between the content and the div edges */
+        }
+        .box-start:hover{
+            background: greenyellow; /* make this whatever you want */
+        }
+        .box:hover{
+            background: lightblue; /* make this whatever you want */
+        }
+        .box-end:hover{
+            background: red; /* make this whatever you want */
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="navbar navbar-light navbar-expand-md">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="/">
+                <img src="static/assets/images/eco_icon.jpg"
+                    style="width: 155px; height: 75px;">
+            </a>
+        </div>
+    </nav>
+    <main>
+        <div class="container-fluid">
+            <div class="row">
+                <div class="col-md-3 col-xl-2"  style="border: 2px solid whitesmoke;">
+                    {% if time_taken and carbon_emission %}
+                        <div>
+                            <span><strong>FROM:</strong></span><br>
+                            {{ start_location }}
+                        </div> 
+                        <div style="margin-top: 20px; margin-bottom: 20px;">
+                            <span><strong>TO:</strong></span><br>
+                            {{ end_location }}
+                        </div>
+                        <div id="resultDiv" style="margin-top: 10px;">
+                            <span>
+                                <strong>TIME TAKEN :</strong> {{ time_taken|round(2) }} minutes
+                            </span>
+                        </div>
+                        <div id="resultDiv" style="margin-top: 10px;">
+                            <span>
+                                <strong>CARBON EMISSION PRODUCED :</strong> {{ carbon_emission|round(2) }} grams
+                            </span>
+                        </div>
+                        <div id="resultDiv" style="margin-top: 10px;">
+                            <span>
+                                <strong>Computing Time :</strong> {{ process_time|round(2) }} seconds
+                            </span>
+                        </div>
+                        <div id="resultDiv" style="margin-top: 10px;">
+                            <span>
+                                <strong>Output Route :</strong>
+                            </span>
+                        </div>      
+                        <div class="scrollable-div">
+                            <div class="box-start">Start : {{ start_location }}</div>
+                            {% for i in range(1, routing|length) %}
+                                <div class="box" style="margin-top: 10px;"> ---> {{ routing[i] }}</div>
+                            {% endfor %}
+                            <div class="box-end" style="margin-top: 10px;">End : {{ end_location }}</div>
+                        </div>
+                        <a href="/"><input type="submit" value="Get Another Route!" style="margin-top: 10px;margin-bottom: 20px;"></a>
+                    {% else %}
+                        <div class="row">
+                            <div class="col">
+                                <form action="/process" method="post" autocomplete="off">
+                                    <div class="autocomplete">
+                                        <span><strong>FROM:</strong></span>
+                                        <input name="start" class="form-control" type="text" style="margin-bottom: 0px;" id="startInput">
+                                    </div> 
+                                    <div class="autocomplete" style="margin-top: 20px; margin-bottom: 20px;">
+                                        <span><strong>TO:</strong></span>
+                                        <input name="end" class="form-control autocomplete" type="text" id="endInput">
+                                    </div>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col">
+                                <div style="margin-bottom: 30px;"><span style="margin-right: 20px;margin-bottom: 20px;"><strong>Transport Mode:</strong></span>
+                                    <select id="transport" name="transport" style="margin-bottom: 0px;" onchange="onSelectChange()">
+                                        <optgroup label=" Choose your Transport mode ">
+                                            <option value="PT" selected="">Public Transport</option>
+                                            <option value="Car">Car</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="col">
+                                <div style="margin-bottom: 20px;margin-right: 30px;"><span style="margin-right: 30px;"><strong>Sort By:</strong></span>
+                                    <select id="mode" name="mode" >
+                                        <optgroup label="Choose your prefered type">
+                                            <option value="Eco" selected="">ECO-FRIENDLIEST</option>
+                                            <option value="Fastest">FASTEST</option>
+                                        </optgroup>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                                    <input type="submit" value="Let's Go!" style="margin-top: 10px;margin-bottom: 20px;" onclick="submitForm()">
+                                </form>   
+                    {% endif %}        
+                </div>
+                <div class="col-md-9 col-xl-10" id="map-container">
+                    <!-- <div id="map-container"> -->
+                        {{ path | safe }}
+                    <!-- </div> -->
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer class="text-center py-4">
+        <div class="container">
+            <div class="row row-cols-1 row-cols-lg-3">
+                <div class="col">
+                    <p class="text-muted my-2">Copyright&nbsp;© 2023 Brand</p>
+                </div>
+                <div class="col">
+                    <ul class="list-inline my-2">
+                        <li class="list-inline-item me-4">
+                            <div class="bs-icon-circle bs-icon-primary bs-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16" class="bi bi-facebook">
+                                    <path d="M16 8.049c0-4.446-3.582-8.05-8-8.05C3.58 0-.002 3.603-.002 8.05c0 4.017 2.926 7.347 6.75 7.951v-5.625h-2.03V8.05H6.75V6.275c0-2.017 1.195-3.131 3.022-3.131.876 0 1.791.157 1.791.157v1.98h-1.009c-.993 0-1.303.621-1.303 1.258v1.51h2.218l-.354 2.326H9.25V16c3.824-.604 6.75-3.934 6.75-7.951z"></path>
+                                </svg></div>
+                        </li>
+                        <li class="list-inline-item me-4">
+                            <div class="bs-icon-circle bs-icon-primary bs-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16" class="bi bi-twitter">
+                                    <path d="M5.026 15c6.038 0 9.341-5.003 9.341-9.334 0-.14 0-.282-.006-.422A6.685 6.685 0 0 0 16 3.542a6.658 6.658 0 0 1-1.889.518 3.301 3.301 0 0 0 1.447-1.817 6.533 6.533 0 0 1-2.087.793A3.286 3.286 0 0 0 7.875 6.03a9.325 9.325 0 0 1-6.767-3.429 3.289 3.289 0 0 0 1.018 4.382A3.323 3.323 0 0 1 .64 6.575v.045a3.288 3.288 0 0 0 2.632 3.218 3.203 3.203 0 0 1-.865.115 3.23 3.23 0 0 1-.614-.057 3.283 3.283 0 0 0 3.067 2.277A6.588 6.588 0 0 1 .78 13.58a6.32 6.32 0 0 1-.78-.045A9.344 9.344 0 0 0 5.026 15z"></path>
+                                </svg></div>
+                        </li>
+                        <li class="list-inline-item">
+                            <div class="bs-icon-circle bs-icon-primary bs-icon"><svg xmlns="http://www.w3.org/2000/svg" width="1em" height="1em" fill="currentColor" viewBox="0 0 16 16" class="bi bi-instagram">
+                                    <path d="M8 0C5.829 0 5.556.01 4.703.048 3.85.088 3.269.222 2.76.42a3.917 3.917 0 0 0-1.417.923A3.927 3.927 0 0 0 .42 2.76C.222 3.268.087 3.85.048 4.7.01 5.555 0 5.827 0 8.001c0 2.172.01 2.444.048 3.297.04.852.174 1.433.372 1.942.205.526.478.972.923 1.417.444.445.89.719 1.416.923.51.198 1.09.333 1.942.372C5.555 15.99 5.827 16 8 16s2.444-.01 3.298-.048c.851-.04 1.434-.174 1.943-.372a3.916 3.916 0 0 0 1.416-.923c.445-.445.718-.891.923-1.417.197-.509.332-1.09.372-1.942C15.99 10.445 16 10.173 16 8s-.01-2.445-.048-3.299c-.04-.851-.175-1.433-.372-1.941a3.926 3.926 0 0 0-.923-1.417A3.911 3.911 0 0 0 13.24.42c-.51-.198-1.092-.333-1.943-.372C10.443.01 10.172 0 7.998 0h.003zm-.717 1.442h.718c2.136 0 2.389.007 3.232.046.78.035 1.204.166 1.486.275.373.145.64.319.92.599.28.28.453.546.598.92.11.281.24.705.275 1.485.039.843.047 1.096.047 3.231s-.008 2.389-.047 3.232c-.035.78-.166 1.203-.275 1.485a2.47 2.47 0 0 1-.599.919c-.28.28-.546.453-.92.598-.28.11-.704.24-1.485.276-.843.038-1.096.047-3.232.047s-2.39-.009-3.233-.047c-.78-.036-1.203-.166-1.485-.276a2.478 2.478 0 0 1-.92-.598 2.48 2.48 0 0 1-.6-.92c-.109-.281-.24-.705-.275-1.485-.038-.843-.046-1.096-.046-3.233 0-2.136.008-2.388.046-3.231.036-.78.166-1.204.276-1.486.145-.373.319-.64.599-.92.28-.28.546-.453.92-.598.282-.11.705-.24 1.485-.276.738-.034 1.024-.044 2.515-.045v.002zm4.988 1.328a.96.96 0 1 0 0 1.92.96.96 0 0 0 0-1.92zm-4.27 1.122a4.109 4.109 0 1 0 0 8.217 4.109 4.109 0 0 0 0-8.217zm0 1.441a2.667 2.667 0 1 1 0 5.334 2.667 2.667 0 0 1 0-5.334z"></path>
+                                </svg></div>
+                        </li>
+                    </ul>
+                </div>
+                <div class="col">
+                    <ul class="list-inline my-2">
+                        <li class="list-inline-item"><a class="link-secondary" href="#">Privacy Policy</a></li>
+                        <li class="list-inline-item"><a class="link-secondary" href="#">Terms of Use</a></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Function to fetch the Mrt CSV data from the server
+        function fetchMRTData() {
+            return fetch('/get-mrt-data')
+                .then(response => response.json())
+                .catch(error => {
+                    console.error("Error fetching merged CSV data:", error);
+                });
+        };
+
+        // Function to fetch the Bus CSV data from the server
+        function fetchBusData() {
+            return fetch('/get-bus-data')
+                .then(response => response.json())
+                .catch(error => {
+                    console.error("Error fetching merged CSV data:", error);
+                });
+        };
+
+        // // Call the function to fetch new merged CSV data when the page loads or when needed
+        // fetchMergedCsvData();
+        function autocomplete(inp, arr) {
+            /*the autocomplete function takes two arguments,
+            the text field element and an array of possible autocompleted values:*/
+            var currentFocus;
+            /*execute a function when someone writes in the text field:*/
+            inp.addEventListener("input", function(e) {
+                var a, b, i, val = this.value;
+                /*close any already open lists of autocompleted values*/
+                closeAllLists();
+                if (!val) { return false;}
+                currentFocus = -1;
+                /*create a DIV element that will contain the items (values):*/
+                a = document.createElement("DIV");
+                a.setAttribute("id", this.id + "autocomplete-list");
+                a.setAttribute("class", "autocomplete-items");
+                /*append the DIV element as a child of the autocomplete container:*/
+                this.parentNode.appendChild(a);
+                /*for each item in the array...*/
+                for (i = 0; i < arr.length; i++) {
+                    /*check if the item starts with the same letters as the text field value:*/
+                    if (arr[i].substr(0, val.length).toUpperCase() == val.toUpperCase()) {
+                    /*create a DIV element for each matching element:*/
+                    b = document.createElement("DIV");
+                    /*make the matching letters bold:*/
+                    b.innerHTML = "<strong>" + arr[i].substr(0, val.length) + "</strong>";
+                    b.innerHTML += arr[i].substr(val.length);
+                    /*insert a input field that will hold the current array item's value:*/
+                    b.innerHTML += "<input type='hidden' value='" + arr[i] + "'>";
+                    /*execute a function when someone clicks on the item value (DIV element):*/
+                        b.addEventListener("click", function(e) {
+                        /*insert the value for the autocomplete text field:*/
+                        inp.value = this.getElementsByTagName("input")[0].value;
+                        /*close the list of autocompleted values,
+                        (or any other open lists of autocompleted values:*/
+                        closeAllLists();
+                    });
+                    a.appendChild(b);
+                    }
+                }
+            });
+            /*execute a function presses a key on the keyboard:*/
+            inp.addEventListener("keydown", function(e) {
+                var x = document.getElementById(this.id + "autocomplete-list");
+                if (x) x = x.getElementsByTagName("div");
+                if (e.keyCode == 40) {
+                    /*If the arrow DOWN key is pressed,
+                    increase the currentFocus variable:*/
+                    currentFocus++;
+                    /*and and make the current item more visible:*/
+                    addActive(x);
+                } else if (e.keyCode == 38) { //up
+                    /*If the arrow UP key is pressed,
+                    decrease the currentFocus variable:*/
+                    currentFocus--;
+                    /*and and make the current item more visible:*/
+                    addActive(x);
+                } else if (e.keyCode == 13) {
+                    /*If the ENTER key is pressed, prevent the form from being submitted,*/
+                    e.preventDefault();
+                    if (currentFocus > -1) {
+                    /*and simulate a click on the "active" item:*/
+                    if (x) x[currentFocus].click();
+                    }
+                }
+            });
+        function addActive(x) {
+            /*a function to classify an item as "active":*/
+            if (!x) return false;
+            /*start by removing the "active" class on all items:*/
+            removeActive(x);
+            if (currentFocus >= x.length) currentFocus = 0;
+            if (currentFocus < 0) currentFocus = (x.length - 1);
+            /*add class "autocomplete-active":*/
+            x[currentFocus].classList.add("autocomplete-active");
+        }
+        function removeActive(x) {
+            /*a function to remove the "active" class from all autocomplete items:*/
+            for (var i = 0; i < x.length; i++) {
+            x[i].classList.remove("autocomplete-active");
+            }
+        }
+        function closeAllLists(elmnt) {
+            /*close all autocomplete lists in the document,
+            except the one passed as an argument:*/
+            var x = document.getElementsByClassName("autocomplete-items");
+            for (var i = 0; i < x.length; i++) {
+            if (elmnt != x[i] && elmnt != inp) {
+            x[i].parentNode.removeChild(x[i]);
+            }
+        }
+        }
+        /*execute a function when someone clicks in the document:*/
+        document.addEventListener("click", function (e) {
+            closeAllLists(e.target);
+        });
+        }
+
+        // Function to set up the autocomplete for your input elements
+        async function setupAutocomplete() {
+            // Get your input elements (assuming they have IDs "startInput" and "endInput")
+            const startInputElement = document.getElementById("startInput");
+            const endInputElement = document.getElementById("endInput");
+
+            // Fetch the JSON data using the fetch[Mode]Data() function
+            const jsonDataMrt = await fetchMRTData();
+            const jsonDataBus = await fetchBusData();
+
+            // Extract the station names and bus stop codes from the jsonData array of objects
+            const stationNames = jsonDataMrt.map(item => item.STN_NAME);
+            const busStopCodes = jsonDataBus.map(item => item.Location);
+
+            // Combine both arrays into a single array
+            const combinedItems = [...stationNames, ...busStopCodes];
+
+            console.log(combinedItems);
+
+            // Autocomplete for "Start" input
+            autocomplete(startInputElement, combinedItems);
+
+            // Autocomplete for "End" input
+            autocomplete(endInputElement, combinedItems);
+        }
+
+        // Execute the setupAutocomplete function when the document is ready
+        document.addEventListener("DOMContentLoaded", setupAutocomplete);
+        function submitForm() {
+
+            // Get form data
+            const formData = new FormData(document.getElementById('myForm'));
+            const start = formData.get('start');
+            const end = formData.get('end');
+            const mode = formData.get('mode');
+            const transport = formData.get('transport');
+
+            // Create a new XMLHttpRequest object
+            const xhr = new XMLHttpRequest();
+
+            // Configure the request
+            xhr.open('POST', '/process', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+
+            // Define what to do when the request is complete
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === XMLHttpRequest.DONE) {
+                    if (xhr.status === 200) {
+                        // Request succeeded, update the result div
+                        const resultDiv = document.getElementById('result');
+                        resultDiv.innerHTML = xhr.responseText;
+                    } else {
+                        // Request failed, handle the error
+                        console.error('Request failed:', xhr.status, xhr.statusText);
+                    }
+                }
+            };
+            // Send the request with the form data
+            xhr.send(`start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`);
+        }
+
+        function onSelectChange() {
+            // Get the selected value of Transport Select 
+            const selectedValue = document.getElementById('transport').value;
+
+            // Get the reference to Mode Select
+            const select2Element = document.getElementById('mode');
+
+            // Check if the selected value of Transport Select is 'Car'
+            if (selectedValue === 'Car') {
+            // Disable Mode Select and reset its value
+            select2Element.disabled = true;
+            } else {
+            // Enable Bus Select
+            select2Element.disabled = false;
+            }
+        }
+    </script>
+</body>
+
+</html>
